@@ -1,0 +1,51 @@
+NVIDIA AI Platform Overview
+===========================
+
+NVIDIA provides a full-stack accelerated computing platform for artificial intelligence, from hardware to software to cloud services.
+
+Hardware
+--------
+- A100 Tensor Core GPU: 80GB HBM2e memory, 3rd generation Tensor Cores, ideal for training and inference of large AI models.
+- H100 Tensor Core GPU: Based on the Hopper architecture, delivers up to 9x faster AI training and 30x faster inference compared to A100.
+- L40S GPU: Designed for AI-powered video, image generation, and large language model inference in data centers.
+- Jetson Orin: Edge AI computing module for robotics, autonomous machines, and IoT devices. Available in Nano, NX, and AGX variants.
+- DGX Systems: Purpose-built AI supercomputers combining multiple GPUs with optimized networking and storage.
+
+Software
+--------
+- CUDA Toolkit: Parallel computing platform and API model enabling GPU-accelerated applications across thousands of domains.
+- NeMo Framework: Open-source toolkit for building, training, and fine-tuning large language models (LLMs) and speech AI models. Supports model parallelism, RLHF, and guardrails.
+- NIM (NVIDIA Inference Microservices): Containerised, optimised inference endpoints for foundation models. Supports LLMs, embedding models, and vision models via a standard API.
+- TensorRT: High-performance deep learning inference optimizer and runtime, delivering low latency and high throughput.
+- Triton Inference Server: Open-source inference serving software for deploying trained AI models from any framework.
+- AI Enterprise: End-to-end software suite for production AI, including NeMo, NIM, and enterprise support.
+
+Cloud Services
+--------------
+- DGX Cloud: Multi-cloud AI supercomputing service providing on-demand access to DGX systems hosted on AWS, Azure, GCP, and Oracle Cloud.
+- Build: NVIDIA's platform for customising and deploying AI applications using NIM microservices.
+- LaunchPad: Hosted labs providing hands-on experience with NVIDIA AI workflows.
+
+Key Models Available via NIM
+----------------------------
+- Nemotron-4-340B-Instruct: NVIDIA's flagship large language model with 340 billion parameters, optimised for instruction following, reasoning, and code generation.
+- Nemotron-4-8B-Instruct: Efficient 8B parameter model suitable for sub-agent tasks, summarisation, and extraction.
+- NV-Embed-QA-E5-v5: 1024-dimensional embedding model optimised for question-answering retrieval tasks.
+- Llama-3.1-405B via NIM: Meta's largest open model, served through NVIDIA NIM for optimised inference.
+
+NeMo Guardrails
+---------------
+NeMo Guardrails is a toolkit for adding programmable safety controls to LLM-based applications:
+- Topical guardrails: Keep conversations on-topic.
+- Safety guardrails: Block toxic, harmful, or inappropriate content.
+- Security guardrails: Prevent prompt injection and jailbreak attempts.
+- PII detection: Automatically mask personally identifiable information (names, emails, phone numbers, SSNs, credit cards).
+- Hallucination detection: Flag responses not grounded in provided context.
+
+Use Cases
+---------
+1. Enterprise RAG: Combine document retrieval with LLM reasoning for accurate, cited answers over internal knowledge bases.
+2. Autonomous Vehicles: Real-time perception, planning, and decision-making powered by edge GPUs.
+3. Drug Discovery: Accelerate molecular simulation and protein folding with GPU-accelerated frameworks.
+4. Financial Services: Fraud detection, risk modelling, and algorithmic trading with low-latency inference.
+5. Healthcare: Medical imaging analysis, clinical NLP, and patient record summarisation.

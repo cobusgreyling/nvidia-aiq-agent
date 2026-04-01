@@ -131,12 +131,26 @@ pip install -r requirements.txt
 cp .env.example .env
 # Add your NVIDIA NIM API key to .env
 
-# Ingest sample docs
+# Validate your environment
+python check_env.py
+
+# Seed sample database & ingest sample docs
+python seed_sample_db.py
 python ingest.py
 
 # Run
 streamlit run app.py
 ```
+
+The repo ships with sample data so you can explore immediately:
+- **Sample documents** in `data/documents/` — NVIDIA AI overview and AgentIQ architecture guide
+- **Sample SQLite database** at `data/sample.db` — products, customers, and orders tables (seed with `python seed_sample_db.py`)
+
+### Sidebar Features
+
+- **Re-index Documents** — click to re-ingest all files from `data/documents/` without restarting the app
+- **Export Chat** — download your conversation as a Markdown file with reasoning traces and token usage
+- **Environment Check** — run `python check_env.py` to verify API keys, dependencies, configs, and data paths before first run
 
 ## Project Structure
 
@@ -154,6 +168,11 @@ nvidia-aiq-agent/
 │   ├── guardrails.yaml     # NeMo Guardrails config
 │   └── models.yaml         # Model routing config
 ├── ingest.py               # Document ingestion pipeline
+├── check_env.py            # Environment validation script
+├── seed_sample_db.py       # Sample database seeder
+├── data/
+│   ├── documents/          # Sample docs (txt, pdf)
+│   └── sample.db           # Sample SQLite database
 ├── requirements.txt
 ├── .env.example
 └── blog/

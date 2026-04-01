@@ -1,0 +1,69 @@
+NeMo AgentIQ Architecture Guide
+================================
+
+NeMo AgentIQ is an enterprise agentic RAG (Retrieval-Augmented Generation) system that autonomously selects and queries multiple data sources to produce comprehensive, cited answers.
+
+System Design Principles
+-------------------------
+1. Hybrid Model Routing: Use expensive large models (Nemotron-340B) only for planning and synthesis. Route execution tasks to cheaper small models (Nemotron-8B) for ~50% cost reduction.
+2. Parallel Execution: Sub-agents run concurrently via LangGraph state machine, reducing total latency.
+3. Source Diversity: Support for documents, SQL databases, web search, and REST APIs as data sources.
+4. Explainability: Every response includes a reasoning trace showing which sources were queried, what was found, and how the answer was synthesized.
+5. Safety First: NeMo Guardrails enforce PII filtering, toxicity checks, and hallucination detection.
+
+Agent Pipeline
+--------------
+The system follows a plan-execute-synthesize pattern:
+
+Step 1 — Planning (Orchestrator Agent):
+  - Receives user query and conversation history
+  - Determines which data sources are relevant (docs, sql, web, api)
+  - Selects analysis depth (shallow, medium, deep)
+  - Produces a structured plan
+
+Step 2 — Execution (Sub-Agents):
+  - Document Agent: Queries FAISS vector store using similarity search, retrieves top-k chunks, generates answer with source citations
+  - SQL Agent: Translates natural language to SQL, executes against database, returns structured results
+  - Web Agent: Searches the web via Tavily API, summarises results with source URLs
+  - API Agent: Calls configured REST/GraphQL endpoints, extracts relevant data from responses
+
+Step 3 — Synthesis:
+  - Merges results from all sub-agents
+  - Resolves conflicts between sources
+  - Generates a cited answer with [docs], [sql], [web], [api] tags
+  - Provides confidence assessment (high/medium/low)
+
+Technology Stack
+----------------
+- Orchestration: LangGraph (state machine with conditional routing)
+- Agent Framework: LangChain (tools, chains, retrievers)
+- LLM Provider: NVIDIA NIM API (Nemotron models)
+- Vector Store: FAISS (CPU-based similarity search)
+- Embeddings: NV-Embed-QA-E5-v5 (1024 dimensions)
+- Web Search: Tavily API
+- Database: SQLAlchemy (supports SQLite, PostgreSQL, and more)
+- Guardrails: NeMo Guardrails
+- UI: Streamlit
+- Tracing: LangSmith (optional)
+
+Configuration
+-------------
+Model parameters are defined in config/models.yaml:
+- Orchestrator: temperature=0.1 (deterministic planning), max_tokens=2048
+- Sub-agents: temperature=0.2 (slight variability for retrieval), max_tokens=1024
+- Synthesis: temperature=0.3 (balanced for answer generation), max_tokens=4096
+- Embeddings: 1024-dimensional vectors
+
+Deployment Options
+------------------
+1. Local development: streamlit run app.py
+2. Docker: docker-compose up (includes volume mounts and health checks)
+3. Kubernetes: Use the Dockerfile with your orchestrator of choice
+4. Cloud: Deploy on any cloud with NVIDIA NIM API access
+
+Cost Estimation
+---------------
+The hybrid model approach significantly reduces costs:
+- Planning queries use Nemotron-340B (~$0.001/1K tokens)
+- Execution queries use Nemotron-8B (~$0.0001/1K tokens)
+- For a typical query hitting 2 sub-agents, the blended cost is roughly 50% less than using the large model for everything.

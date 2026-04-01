@@ -1,5 +1,6 @@
 """NeMo AgentIQ — Streamlit GUI for Enterprise Agentic RAG."""
 
+import datetime
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -23,6 +24,29 @@ if "doc_agent" not in st.session_state:
 
 doc_agent = st.session_state.doc_agent
 
+
+def _export_chat_markdown() -> str:
+    """Format the conversation history as a Markdown document."""
+    lines = [
+        f"# NeMo AgentIQ — Chat Export",
+        f"*Exported on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}*\n",
+        "---\n",
+    ]
+    for msg in st.session_state.messages:
+        role = "User" if msg["role"] == "user" else "Assistant"
+        lines.append(f"## {role}\n")
+        lines.append(msg["content"] + "\n")
+        if msg.get("trace"):
+            lines.append("<details><summary>Reasoning Trace</summary>\n")
+            for step in msg["trace"]:
+                lines.append(f"- {step}")
+            lines.append("\n</details>\n")
+        if msg.get("tokens"):
+            lines.append(f"*Tokens: {msg['tokens']:,} | Est. cost: ${msg['tokens'] * 0.000001:.4f}*\n")
+        lines.append("---\n")
+    return "\n".join(lines)
+
+
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 
 with st.sidebar:
@@ -44,6 +68,15 @@ with st.sidebar:
                 chunk_count = doc_agent.ingest_uploaded_files(uploaded_files)
             st.success(f"Ingested {len(uploaded_files)} file(s) → {chunk_count} chunks")
 
+    if st.button("Re-index Documents"):
+        with st.spinner("Re-indexing from data/documents/..."):
+            from ingest import ingest as run_ingest
+            run_ingest()
+            st.session_state.doc_agent = DocAgent()
+            doc_agent = st.session_state.doc_agent
+            doc_agent.load_vectorstore()
+        st.success("Documents re-indexed from disk")
+
     # ── Data source toggles ──────────────────────────────────────────────
     st.divider()
     st.subheader("Data Sources")
@@ -58,11 +91,21 @@ with st.sidebar:
     depth = st.selectbox("Analysis Depth", ["Auto", "Shallow", "Medium", "Deep"])
     enable_streaming = st.checkbox("Stream responses", value=True)
 
-    # ── Clear chat ───────────────────────────────────────────────────────
+    # ── Export / Clear ────────────────────────────────────────────────────
     st.divider()
-    if st.button("Clear Chat History"):
-        st.session_state.messages = []
-        st.rerun()
+    col_export, col_clear = st.columns(2)
+    with col_export:
+        if st.session_state.messages:
+            st.download_button(
+                "Export Chat",
+                data=_export_chat_markdown(),
+                file_name=f"agentiq_chat_{datetime.date.today()}.md",
+                mime="text/markdown",
+            )
+    with col_clear:
+        if st.button("Clear Chat"):
+            st.session_state.messages = []
+            st.rerun()
 
     st.caption("Powered by NVIDIA NIM + LangChain")
 
