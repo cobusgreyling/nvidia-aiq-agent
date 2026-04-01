@@ -1,8 +1,5 @@
 """Tests for the document ingestion pipeline."""
 
-import os
-import tempfile
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 
@@ -15,7 +12,7 @@ class TestIngest:
 
         with patch("ingest.DOCS_DIR", str(docs_dir)), \
              patch("ingest.VECTOR_STORE_PATH", vector_path), \
-             patch("ingest.NVIDIAEmbeddings") as MockEmbed, \
+             patch("ingest.NVIDIAEmbeddings"), \
              patch("ingest.FAISS") as MockFAISS, \
              patch("ingest.DirectoryLoader") as MockLoader:
 

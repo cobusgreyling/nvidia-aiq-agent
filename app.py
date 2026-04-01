@@ -1,17 +1,16 @@
 """NeMo AgentIQ — Streamlit GUI for Enterprise Agentic RAG."""
 
-import os
 import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
-from agents.orchestrator import OrchestratorAgent
-from agents.doc_agent import DocAgent
-from agents.sql_agent import SQLAgent
-from agents.web_agent import WebAgent
-from agents.api_agent import APIAgent
-from agents.synthesis import SynthesisAgent
+from agents.orchestrator import OrchestratorAgent  # noqa: E402
+from agents.doc_agent import DocAgent  # noqa: E402
+from agents.sql_agent import SQLAgent  # noqa: E402
+from agents.web_agent import WebAgent  # noqa: E402
+from agents.api_agent import APIAgent  # noqa: E402
+from agents.synthesis import SynthesisAgent  # noqa: E402
 
 st.set_page_config(page_title="NeMo AgentIQ", page_icon="⚡", layout="wide")
 

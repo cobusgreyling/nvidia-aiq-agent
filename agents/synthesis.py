@@ -9,7 +9,8 @@ logger = setup_logging()
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
 
-SYNTHESIS_PROMPT = """You are a synthesis agent. Merge the following results from multiple data sources into a single, well-structured answer to the user's query.
+SYNTHESIS_PROMPT = """You are a synthesis agent. Merge the following results from multiple \
+data sources into a single, well-structured answer to the user's query.
 
 **Conversation History:**
 {chat_history}
@@ -64,7 +65,10 @@ class SynthesisAgent:
         )
 
         # Use actual token usage from model response when available
-        usage = getattr(response, "usage_metadata", None) or getattr(response, "response_metadata", {}).get("token_usage")
+        usage = (
+            getattr(response, "usage_metadata", None)
+            or getattr(response, "response_metadata", {}).get("token_usage")
+        )
         if usage and isinstance(usage, dict):
             state["token_usage"] = usage.get("total_tokens", 0) or (
                 usage.get("input_tokens", 0) + usage.get("output_tokens", 0)

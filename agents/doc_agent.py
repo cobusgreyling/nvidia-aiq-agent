@@ -61,10 +61,10 @@ class DocAgent:
 
             try:
                 if suffix.lower() == ".pdf":
-                    loader = PyPDFLoader(tmp_path)
+                    docs = PyPDFLoader(tmp_path).load()
                 else:
-                    loader = TextLoader(tmp_path)
-                documents.extend(loader.load())
+                    docs = TextLoader(tmp_path).load()
+                documents.extend(docs)
             finally:
                 os.unlink(tmp_path)
 

@@ -10,16 +10,16 @@ logger = setup_logging()
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
 
-EXTRACT_PROMPT = """Given this API response for the query "{query}", extract the relevant information and summarise it clearly.
-
-API Response:
-{response}
-
-Summarise the key data points relevant to the query."""
+EXTRACT_PROMPT = (
+    "Given this API response for the query \"{query}\", "
+    "extract the relevant information and summarise it clearly.\n\n"
+    "API Response:\n{response}\n\n"
+    "Summarise the key data points relevant to the query."
+)
 
 
 class APIAgent:
-    def __init__(self, endpoints: dict = None):
+    def __init__(self, endpoints: dict | None = None):
         self.llm = ChatNVIDIA(
             model=MODEL_CONFIG["sub_agents"]["model"],
             temperature=MODEL_CONFIG["sub_agents"]["temperature"],

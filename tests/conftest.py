@@ -37,7 +37,6 @@ for mod_name in _STUB_MODULES:
 sys.modules["langgraph.graph"].END = "END"
 
 # Provide a real TypedDict so AgentState works
-from typing import TypedDict  # noqa: E402
 sys.modules["langgraph.graph"].StateGraph = MagicMock()
 
 

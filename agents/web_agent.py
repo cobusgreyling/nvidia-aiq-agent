@@ -20,7 +20,7 @@ Provide a concise summary with key facts. Cite the source URL for each fact."""
 
 
 class WebAgent:
-    def __init__(self, search_api_key: str = None):
+    def __init__(self, search_api_key: str | None = None):
         self.llm = ChatNVIDIA(
             model=MODEL_CONFIG["sub_agents"]["model"],
             temperature=MODEL_CONFIG["sub_agents"]["temperature"],

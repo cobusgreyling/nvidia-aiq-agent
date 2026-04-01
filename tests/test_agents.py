@@ -102,7 +102,7 @@ class TestWebAgent:
 
     def test_search_returns_structured_results(self):
         with patch("agents.web_agent.ChatNVIDIA"), \
-             patch("agents.web_agent.TavilyClient") as MockTavily:
+             patch("agents.web_agent.TavilyClient"):
 
             mock_client = MagicMock()
             mock_client.search.return_value = {
@@ -161,7 +161,7 @@ class TestSQLAgent:
 
     def test_run_handles_sql_error(self, sample_state):
         with patch("agents.sql_agent.ChatNVIDIA"), \
-             patch("agents.sql_agent.SQLDatabase") as MockDB, \
+             patch("agents.sql_agent.SQLDatabase"), \
              patch("agents.sql_agent.create_sql_query_chain") as MockChain:
 
             MockChain.return_value.invoke.return_value = "SELECT * FROM users"
