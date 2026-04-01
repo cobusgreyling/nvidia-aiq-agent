@@ -10,62 +10,11 @@ An open-source implementation inspired by NVIDIA's AI-Q blueprint. NeMo AgentIQ 
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────┐
-│                   USER QUERY                         │
-└──────────────────────┬──────────────────────────────┘
-                       ▼
-┌─────────────────────────────────────────────────────┐
-│            ORCHESTRATOR AGENT                        │
-│         (LangGraph + LangChain)                     │
-│                                                      │
-│  • Plans query strategy                              │
-│  • Selects data sources                              │
-│  • Decides analysis depth                            │
-│  • Routes to sub-agents                              │
-│                                                      │
-│  Model: NVIDIA Nemotron-4-340B (via NVIDIA NIM)     │
-└──────┬─────────┬──────────┬────────────┬────────────┘
-       ▼         ▼          ▼            ▼
-┌──────────┐ ┌────────┐ ┌────────┐ ┌──────────┐
-│ DOC RAG  │ │ SQL    │ │ WEB    │ │ API      │
-│ AGENT    │ │ AGENT  │ │ AGENT  │ │ AGENT    │
-│          │ │        │ │        │ │          │
-│LangChain │ │LangCh. │ │LangCh.│ │LangChain │
-│Retriever │ │SQL Tool│ │Search  │ │Tool Call │
-└────┬─────┘ └───┬────┘ └───┬────┘ └────┬─────┘
-     ▼           ▼          ▼            ▼
-┌──────────┐ ┌────────┐ ┌────────┐ ┌──────────┐
-│NVIDIA    │ │Postgres│ │Web     │ │REST/     │
-│NeMo      │ │SQLite  │ │Search  │ │GraphQL   │
-│Retriever │ │etc.    │ │API     │ │Endpoints │
-│+ FAISS   │ │        │ │        │ │          │
-└──────────┘ └────────┘ └────────┘ └──────────┘
-       │         │          │            │
-       └─────────┴──────┬───┴────────────┘
-                        ▼
-┌─────────────────────────────────────────────────────┐
-│              SYNTHESIS AGENT                         │
-│         (Nemotron via NVIDIA NIM)                   │
-│                                                      │
-│  • Merges results from all sources                   │
-│  • Generates cited, explained answer                 │
-│  • Produces explainability trace                     │
-└──────────────────────┬──────────────────────────────┘
-                       ▼
-┌─────────────────────────────────────────────────────┐
-│              GUARDRAILS LAYER                        │
-│           (NVIDIA NeMo Guardrails)                  │
-│                                                      │
-│  • PII filtering                                     │
-│  • Hallucination check                               │
-│  • Policy enforcement                                │
-└──────────────────────┬──────────────────────────────┘
-                       ▼
-                   RESPONSE
-          (answer + source citations
-           + reasoning trace)
-```
+
+<p align="center">
+  <img src="flow.jpg" alt="Streamlit GUI" width="100%"/>
+</p>
+
 
 ## Streamlit GUI
 
