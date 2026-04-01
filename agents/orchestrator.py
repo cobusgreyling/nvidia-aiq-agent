@@ -3,7 +3,7 @@
 import yaml
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langgraph.graph import StateGraph, END
-from typing import TypedDict, Literal
+from typing import TypedDict
 
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
@@ -11,6 +11,7 @@ with open("config/models.yaml") as f:
 
 class AgentState(TypedDict):
     query: str
+    chat_history: str
     plan: dict
     sources: list[str]
     depth: str
@@ -23,11 +24,16 @@ class AgentState(TypedDict):
     token_usage: int
 
 
-PLANNING_PROMPT = """You are a query planning agent. Given a user query, determine:
+PLANNING_PROMPT = """You are a query planning agent. Given a user query and conversation history, determine:
 
 1. Which data sources to query: docs, sql, web, api (pick only relevant ones)
 2. Analysis depth: shallow (quick lookup), medium (cross-reference), deep (comprehensive)
 3. A brief plan of action
+
+If the user is asking a follow-up question, use the conversation history to understand context.
+
+Conversation history:
+{chat_history}
 
 Respond in this exact format:
 SOURCES: <comma-separated list>
@@ -48,7 +54,10 @@ class OrchestratorAgent:
     def plan_query(self, state: AgentState) -> AgentState:
         """Analyse the query and decide which sources to use."""
         response = self.llm.invoke(
-            PLANNING_PROMPT.format(query=state["query"])
+            PLANNING_PROMPT.format(
+                query=state["query"],
+                chat_history=state.get("chat_history", "None"),
+            )
         )
         text = response.content
 

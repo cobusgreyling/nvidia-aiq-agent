@@ -1,8 +1,9 @@
-"""Web Agent — searches the web and summarises results."""
+"""Web Agent — searches the web via Tavily and summarises results."""
 
+import os
 import yaml
-import requests
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from tavily import TavilyClient
 
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
@@ -22,16 +23,33 @@ class WebAgent:
             temperature=MODEL_CONFIG["sub_agents"]["temperature"],
             max_tokens=MODEL_CONFIG["sub_agents"]["max_tokens"],
         )
-        self.search_api_key = search_api_key
+        self.api_key = search_api_key or os.getenv("TAVILY_API_KEY")
+        self.client = TavilyClient(api_key=self.api_key) if self.api_key else None
 
-    def _search(self, query: str) -> list[dict]:
-        """Perform a web search. Override this with your preferred search API."""
-        # Placeholder — integrate with SerpAPI, Tavily, or Brave Search
-        return [{"title": "No search API configured", "snippet": "Set search_api_key", "url": ""}]
+    def _search(self, query: str, max_results: int = 5) -> list[dict]:
+        """Search the web using Tavily API."""
+        if not self.client:
+            return [{"title": "Tavily not configured", "snippet": "Set TAVILY_API_KEY in .env", "url": ""}]
+
+        response = self.client.search(
+            query=query,
+            max_results=max_results,
+            include_answer=False,
+        )
+
+        results = []
+        for item in response.get("results", []):
+            results.append({
+                "title": item.get("title", ""),
+                "snippet": item.get("content", ""),
+                "url": item.get("url", ""),
+            })
+        return results
 
     def run(self, state: dict) -> dict:
         """Search the web and summarise findings."""
-        results = self._search(state["query"])
+        max_results = 8 if state.get("depth") == "deep" else 5
+        results = self._search(state["query"], max_results=max_results)
 
         formatted = "\n".join(
             f"- {r['title']}: {r['snippet']} ({r['url']})" for r in results
@@ -41,8 +59,9 @@ class WebAgent:
             SUMMARISE_PROMPT.format(query=state["query"], results=formatted)
         )
 
+        urls = [r["url"] for r in results if r["url"]]
         state["web_results"] = response.content
         state["reasoning_trace"].append(
-            f"Step: Web agent searched and found {len(results)} results"
+            f"Step: Web agent searched Tavily, found {len(results)} results from: {', '.join(urls[:3])}"
         )
         return state
