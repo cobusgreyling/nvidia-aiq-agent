@@ -4,6 +4,7 @@ import json
 import yaml
 import requests
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from agents.retry import llm_retry, http_retry
 from log_config import setup_logging
 
 logger = setup_logging()
@@ -59,13 +60,16 @@ class APIAgent:
         if not url:
             return f"Endpoint '{name}' not configured"
 
-        if method == "GET":
-            query_param = endpoint.get("query_param", "query")
-            params = {} if query_param in ("path", "none") else {"query": param}
-            resp = requests.get(url, params=params, timeout=30)
-        else:
-            resp = requests.post(url, json={"query": param}, timeout=30)
+        @http_retry
+        def _do_request():
+            if method == "GET":
+                query_param = endpoint.get("query_param", "query")
+                params = {} if query_param in ("path", "none") else {"query": param}
+                return requests.get(url, params=params, timeout=30)
+            else:
+                return requests.post(url, json={"query": param}, timeout=30)
 
+        resp = _do_request()
         resp.raise_for_status()
 
         # Handle both JSON and plain text responses
@@ -87,7 +91,8 @@ class APIAgent:
             for name, ep in self.endpoints.items()
         )
 
-        response = self.llm.invoke(
+        _invoke = llm_retry(self.llm.invoke)
+        response = _invoke(
             SELECT_PROMPT.format(endpoints=endpoint_descriptions, query=query)
         )
 
@@ -112,7 +117,13 @@ class APIAgent:
             return state
 
         # Ask LLM which endpoints to call
-        calls = self._select_endpoints(state["query"])
+        try:
+            calls = self._select_endpoints(state["query"])
+        except Exception as e:
+            logger.error("API agent endpoint selection failed after retries: %s", e)
+            state["api_results"] = f"API agent unavailable: {e}"
+            state["reasoning_trace"].append(f"Step: API agent failed during endpoint selection — {e}")
+            return state
 
         if not calls:
             state["api_results"] = "No relevant API endpoints for this query."
@@ -128,16 +139,22 @@ class APIAgent:
                 all_results.append(f"[{desc}]\n{result}")
                 called_names.append(name)
             except Exception as e:
-                logger.error("API agent call to %s failed: %s", name, e)
+                logger.error("API agent call to %s failed after retries: %s", name, e)
                 all_results.append(f"{name}: error — {e}")
                 called_names.append(f"{name}(failed)")
 
         combined = "\n\n".join(all_results)
-        response = self.llm.invoke(
-            EXTRACT_PROMPT.format(query=state["query"], response=combined)
-        )
+        try:
+            _invoke = llm_retry(self.llm.invoke)
+            response = _invoke(
+                EXTRACT_PROMPT.format(query=state["query"], response=combined)
+            )
+            state["api_results"] = response.content
+        except Exception as e:
+            logger.error("API agent summarisation failed after retries: %s", e)
+            # Graceful degradation: return raw API results
+            state["api_results"] = f"API results (raw — summarisation unavailable):\n{combined}"
 
-        state["api_results"] = response.content
         state["reasoning_trace"].append(
             f"Step: API agent called {len(called_names)} endpoint(s): {', '.join(called_names)}"
         )

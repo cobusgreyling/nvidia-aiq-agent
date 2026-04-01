@@ -28,6 +28,7 @@ _STUB_MODULES = [
     "streamlit",
     "pypdf",
     "requests.utils",
+    "tenacity",
 ]
 
 for mod_name in _STUB_MODULES:
@@ -39,6 +40,14 @@ sys.modules["langgraph.graph"].END = "END"
 
 # Provide a real TypedDict so AgentState works
 sys.modules["langgraph.graph"].StateGraph = MagicMock()
+
+# Make tenacity decorators pass-through in tests
+_tenacity = sys.modules["tenacity"]
+_tenacity.retry = lambda **kwargs: lambda f: f
+_tenacity.stop_after_attempt = lambda *a: None
+_tenacity.wait_exponential = lambda **kw: None
+_tenacity.retry_if_exception_type = lambda *a: None
+_tenacity.before_sleep_log = lambda *a: None
 
 
 @pytest.fixture

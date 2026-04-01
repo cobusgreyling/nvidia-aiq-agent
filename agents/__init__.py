@@ -4,6 +4,7 @@ from agents.sql_agent import SQLAgent
 from agents.web_agent import WebAgent
 from agents.api_agent import APIAgent
 from agents.synthesis import SynthesisAgent
+from agents.guardrails import GuardrailsAgent
 
 __all__ = [
     "OrchestratorAgent",
@@ -12,4 +13,5 @@ __all__ = [
     "WebAgent",
     "APIAgent",
     "SynthesisAgent",
+    "GuardrailsAgent",
 ]

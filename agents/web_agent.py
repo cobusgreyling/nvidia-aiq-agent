@@ -4,6 +4,7 @@ import os
 import yaml
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from tavily import TavilyClient
+from agents.retry import llm_retry, http_retry
 from log_config import setup_logging
 
 logger = setup_logging()
@@ -34,7 +35,8 @@ class WebAgent:
         if not self.client:
             return [{"title": "Tavily not configured", "snippet": "Set TAVILY_API_KEY in .env", "url": ""}]
 
-        response = self.client.search(
+        _search = http_retry(self.client.search)
+        response = _search(
             query=query,
             max_results=max_results,
             include_answer=False,
@@ -52,15 +54,32 @@ class WebAgent:
     def run(self, state: dict) -> dict:
         """Search the web and summarise findings."""
         max_results = 8 if state.get("depth") == "deep" else 5
-        results = self._search(state["query"], max_results=max_results)
+
+        try:
+            results = self._search(state["query"], max_results=max_results)
+        except Exception as e:
+            logger.error("Web agent search failed after retries: %s", e)
+            state["web_results"] = f"Web search unavailable: {e}"
+            state["reasoning_trace"].append(f"Step: Web agent search failed — {e}")
+            return state
 
         formatted = "\n".join(
             f"- {r['title']}: {r['snippet']} ({r['url']})" for r in results
         )
 
-        response = self.llm.invoke(
-            SUMMARISE_PROMPT.format(query=state["query"], results=formatted)
-        )
+        try:
+            _invoke = llm_retry(self.llm.invoke)
+            response = _invoke(
+                SUMMARISE_PROMPT.format(query=state["query"], results=formatted)
+            )
+        except Exception as e:
+            logger.error("Web agent summarisation failed after retries: %s", e)
+            # Graceful degradation: return raw results instead of summary
+            state["web_results"] = f"Web results (raw — summarisation unavailable):\n{formatted}"
+            state["reasoning_trace"].append(
+                f"Step: Web agent found {len(results)} results but summarisation failed — returning raw"
+            )
+            return state
 
         urls = [r["url"] for r in results if r["url"]]
         logger.info("Web agent found %d results", len(results))

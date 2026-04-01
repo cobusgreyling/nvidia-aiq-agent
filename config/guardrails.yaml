@@ -28,3 +28,8 @@ rails:
       - illegal_activity
 
     max_output_tokens: 4096
+
+    # Semantic guardrails — embedding-based jailbreak detection
+    semantic:
+      enabled: true
+      jailbreak_threshold: 0.82  # cosine similarity threshold (0.0–1.0)

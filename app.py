@@ -27,6 +27,22 @@ if "doc_agent" not in st.session_state:
 if "conversation_id" not in st.session_state:
     st.session_state.conversation_id = None
 
+# Cache agent instances so they aren't re-created on every query
+if "orchestrator" not in st.session_state:
+    st.session_state.orchestrator = OrchestratorAgent()
+if "sql_agent" not in st.session_state:
+    st.session_state.sql_agent = SQLAgent()
+if "web_agent" not in st.session_state:
+    st.session_state.web_agent = WebAgent()
+if "api_agent" not in st.session_state:
+    st.session_state.api_agent = APIAgent()
+if "synthesis_agent" not in st.session_state:
+    st.session_state.synthesis_agent = SynthesisAgent()
+if "guardrails_agent" not in st.session_state:
+    st.session_state.guardrails_agent = GuardrailsAgent()
+if "compiled_graph" not in st.session_state:
+    st.session_state.compiled_graph = None
+
 doc_agent = st.session_state.doc_agent
 
 
@@ -80,6 +96,7 @@ with st.sidebar:
             st.session_state.doc_agent = DocAgent()
             doc_agent = st.session_state.doc_agent
             doc_agent.load_vectorstore()
+            st.session_state.compiled_graph = None  # Invalidate cached graph
         st.success("Documents re-indexed from disk")
 
     # ── Data source toggles ──────────────────────────────────────────────
@@ -191,17 +208,21 @@ if query := st.chat_input("Ask anything..."):
 
             # Step 1: Plan
             st.write("🛡️ Checking input guardrails...")
-            orchestrator = OrchestratorAgent()
-            sql_agent = SQLAgent()
-            web_agent = WebAgent()
-            api_agent = APIAgent()
-            synthesis_agent = SynthesisAgent()
-            guardrails_agent = GuardrailsAgent()
 
-            graph = orchestrator.build_graph(
-                doc_agent, sql_agent, web_agent, api_agent,
-                synthesis_agent, guardrails_agent=guardrails_agent,
-            )
+            # Use cached agent instances and compiled graph
+            orchestrator = st.session_state.orchestrator
+            sql_agent = st.session_state.sql_agent
+            web_agent = st.session_state.web_agent
+            api_agent = st.session_state.api_agent
+            synthesis_agent = st.session_state.synthesis_agent
+            guardrails_agent = st.session_state.guardrails_agent
+
+            if st.session_state.compiled_graph is None:
+                st.session_state.compiled_graph = orchestrator.build_graph(
+                    doc_agent, sql_agent, web_agent, api_agent,
+                    synthesis_agent, guardrails_agent=guardrails_agent,
+                )
+            graph = st.session_state.compiled_graph
 
             # Step 2: Execute sub-agents (non-streaming part)
             st.write("🔍 Querying data sources...")

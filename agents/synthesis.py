@@ -2,6 +2,7 @@
 
 import yaml
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from agents.retry import llm_retry
 from log_config import setup_logging
 
 logger = setup_logging()
@@ -48,7 +49,8 @@ class SynthesisAgent:
 
     def run(self, state: dict) -> dict:
         """Merge all sub-agent results and produce a cited final answer."""
-        response = self.llm.invoke(
+        _invoke = llm_retry(self.llm.invoke)
+        response = _invoke(
             SYNTHESIS_PROMPT.format(
                 query=state["query"],
                 chat_history=state.get("chat_history", "None"),

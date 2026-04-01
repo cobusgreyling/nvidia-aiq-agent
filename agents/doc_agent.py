@@ -9,6 +9,7 @@ from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader, PyPDFLoader
+from agents.retry import llm_retry
 from log_config import setup_logging
 
 logger = setup_logging()
@@ -106,7 +107,14 @@ class DocAgent:
             return_source_documents=True,
         )
 
-        result = chain.invoke({"query": state["query"]})
+        try:
+            _invoke = llm_retry(chain.invoke)
+            result = _invoke({"query": state["query"]})
+        except Exception as e:
+            logger.error("Doc agent retrieval failed after retries: %s", e)
+            state["doc_results"] = f"Document retrieval unavailable: {e}"
+            state["reasoning_trace"].append(f"Step: Doc agent failed — {e}")
+            return state
 
         sources = []
         for doc in result.get("source_documents", []):

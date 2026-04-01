@@ -1,9 +1,12 @@
 """Orchestrator Agent — plans query strategy and routes to sub-agents."""
 
+import copy
 import yaml
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
+from agents.retry import llm_retry
 from log_config import setup_logging
 
 logger = setup_logging()
@@ -48,6 +51,14 @@ PLAN: <one line plan>
 
 User query: {query}"""
 
+# Map source names to their state result keys
+SOURCE_RESULT_KEYS = {
+    "docs": "doc_results",
+    "sql": "sql_results",
+    "web": "web_results",
+    "api": "api_results",
+}
+
 
 class OrchestratorAgent:
     def __init__(self):
@@ -59,7 +70,8 @@ class OrchestratorAgent:
 
     def plan_query(self, state: AgentState) -> AgentState:
         """Analyse the query and decide which sources to use."""
-        response = self.llm.invoke(
+        _invoke = llm_retry(self.llm.invoke)
+        response = _invoke(
             PLANNING_PROMPT.format(
                 query=state["query"],
                 chat_history=state.get("chat_history", "None"),
@@ -99,17 +111,68 @@ class OrchestratorAgent:
 
     def build_graph(self, doc_agent, sql_agent, web_agent, api_agent,
                     synthesis_agent, guardrails_agent=None):
-        """Construct the LangGraph state machine."""
+        """Construct the LangGraph state machine with parallel agent execution."""
+        agent_map = {
+            "docs": doc_agent,
+            "sql": sql_agent,
+            "web": web_agent,
+            "api": api_agent,
+        }
+
+        def execute_parallel(state: AgentState) -> AgentState:
+            """Run all selected sub-agents concurrently."""
+            sources = state.get("sources", [])
+            if not sources:
+                state["reasoning_trace"].append(
+                    "Step: No sources selected — skipping agent execution"
+                )
+                return state
+
+            futures = {}
+            with ThreadPoolExecutor(max_workers=len(sources)) as executor:
+                for source in sources:
+                    if source in agent_map:
+                        # Deep-copy state so agents don't interfere with each other
+                        agent_state = copy.deepcopy(state)
+                        futures[executor.submit(
+                            agent_map[source].run, agent_state
+                        )] = source
+
+            traces = list(state.get("reasoning_trace", []))
+            failed = []
+            for future in as_completed(futures):
+                source = futures[future]
+                result_key = SOURCE_RESULT_KEYS[source]
+                try:
+                    result = future.result()
+                    state[result_key] = result.get(result_key, "")
+                    # Collect reasoning traces from the sub-agent
+                    for t in result.get("reasoning_trace", []):
+                        if t not in traces:
+                            traces.append(t)
+                except Exception as e:
+                    logger.error("%s agent failed: %s", source, e)
+                    state[result_key] = f"{source} agent unavailable: {e}"
+                    traces.append(f"Step: {source} agent failed — {e}")
+                    failed.append(source)
+
+            if failed:
+                remaining = [s for s in sources if s not in failed]
+                traces.append(
+                    f"Step: Graceful degradation — {', '.join(failed)} failed, "
+                    f"continuing with {', '.join(remaining) or 'synthesis only'}"
+                )
+
+            state["reasoning_trace"] = traces
+            return state
+
         graph = StateGraph(AgentState)
 
         if guardrails_agent:
             graph.add_node("input_guardrails", guardrails_agent.check_input)
 
         graph.add_node("planner", self.plan_query)
-        graph.add_node("doc_agent", doc_agent.run)
-        graph.add_node("sql_agent", sql_agent.run)
-        graph.add_node("web_agent", web_agent.run)
-        graph.add_node("api_agent", api_agent.run)
+        graph.add_node("execute_agents", execute_parallel)
         graph.add_node("synthesis", synthesis_agent.run)
 
         if guardrails_agent:
@@ -129,23 +192,8 @@ class OrchestratorAgent:
         else:
             graph.set_entry_point("planner")
 
-        def route_after_plan(state: AgentState) -> list[str]:
-            sources = state.get("sources", [])
-            next_nodes = []
-            if "docs" in sources:
-                next_nodes.append("doc_agent")
-            if "sql" in sources:
-                next_nodes.append("sql_agent")
-            if "web" in sources:
-                next_nodes.append("web_agent")
-            if "api" in sources:
-                next_nodes.append("api_agent")
-            return next_nodes if next_nodes else ["synthesis"]
-
-        graph.add_conditional_edges("planner", route_after_plan)
-
-        for node in ["doc_agent", "sql_agent", "web_agent", "api_agent"]:
-            graph.add_edge(node, "synthesis")
+        graph.add_edge("planner", "execute_agents")
+        graph.add_edge("execute_agents", "synthesis")
 
         if guardrails_agent:
             graph.add_edge("synthesis", "output_guardrails")
