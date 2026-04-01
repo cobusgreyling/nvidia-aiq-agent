@@ -1,6 +1,10 @@
-# NeMo AgentIQ
+<p align="center">
+  <img src="logo.svg" alt="NeMo AgentIQ Logo" width="280"/>
+</p>
 
-**Enterprise Agentic RAG with Multi-Source Reasoning — Powered by NVIDIA NIM & LangChain**
+<h1 align="center">NeMo AgentIQ</h1>
+
+<p align="center"><strong>Enterprise Agentic RAG with Multi-Source Reasoning — Powered by NVIDIA NIM & LangChain</strong></p>
 
 An open-source implementation inspired by NVIDIA's AI-Q blueprint. NeMo AgentIQ autonomously selects data sources, plans query strategy, and synthesises cited answers with full reasoning traces — while cutting inference costs via a hybrid large/small model approach.
 
