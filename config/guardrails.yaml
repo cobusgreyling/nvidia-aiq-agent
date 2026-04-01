@@ -1,0 +1,30 @@
+models:
+  - type: main
+    engine: nvidia_ai_endpoints
+    model: nvidia/nemotron-4-8b-instruct
+
+rails:
+  input:
+    flows:
+      - check jailbreak
+      - check input toxicity
+
+  output:
+    flows:
+      - check output toxicity
+      - check hallucination
+      - mask pii
+
+  config:
+    pii_entities:
+      - PERSON
+      - EMAIL
+      - PHONE_NUMBER
+      - CREDIT_CARD
+      - SSN
+
+    blocked_topics:
+      - violence
+      - illegal_activity
+
+    max_output_tokens: 4096

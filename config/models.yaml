@@ -1,0 +1,21 @@
+orchestrator:
+  model: nvidia/nemotron-4-340b-instruct
+  temperature: 0.1
+  max_tokens: 2048
+  role: "Query planning, source selection, routing"
+
+sub_agents:
+  model: nvidia/nemotron-4-8b-instruct
+  temperature: 0.2
+  max_tokens: 1024
+  role: "Retrieval, summarisation, tool calls"
+
+synthesis:
+  model: nvidia/nemotron-4-340b-instruct
+  temperature: 0.3
+  max_tokens: 4096
+  role: "Final answer generation with citations"
+
+embeddings:
+  model: nvidia/nv-embedqa-e5-v5
+  dimensions: 1024

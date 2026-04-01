@@ -1,0 +1,6 @@
+.env
+data/vectorstore/
+data/documents/*.pdf
+__pycache__/
+*.pyc
+.DS_Store
