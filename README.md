@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.svg" alt="NeMo AgentIQ Logo" width="280"/>
+  <img src="logo.svg" alt="NeMo AgentIQ Logo" width="500"/>
 </p>
 
 <h1 align="center">NeMo AgentIQ</h1>
