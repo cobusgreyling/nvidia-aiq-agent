@@ -26,6 +26,8 @@ class AgentState(TypedDict):
     final_answer: str
     reasoning_trace: list[str]
     token_usage: int
+    guardrail_violations: list[str]
+    guardrail_output_flags: list[str]
 
 
 PLANNING_PROMPT = """You are a query planning agent. Given a user query and conversation history, determine:
@@ -95,9 +97,13 @@ class OrchestratorAgent:
         """Route to the appropriate sub-agents based on planning."""
         return state["sources"]
 
-    def build_graph(self, doc_agent, sql_agent, web_agent, api_agent, synthesis_agent):
+    def build_graph(self, doc_agent, sql_agent, web_agent, api_agent,
+                    synthesis_agent, guardrails_agent=None):
         """Construct the LangGraph state machine."""
         graph = StateGraph(AgentState)
+
+        if guardrails_agent:
+            graph.add_node("input_guardrails", guardrails_agent.check_input)
 
         graph.add_node("planner", self.plan_query)
         graph.add_node("doc_agent", doc_agent.run)
@@ -106,7 +112,22 @@ class OrchestratorAgent:
         graph.add_node("api_agent", api_agent.run)
         graph.add_node("synthesis", synthesis_agent.run)
 
-        graph.set_entry_point("planner")
+        if guardrails_agent:
+            graph.add_node("output_guardrails", guardrails_agent.check_output)
+
+        # Entry point: guardrails first if available
+        if guardrails_agent:
+            graph.set_entry_point("input_guardrails")
+
+            def route_after_guardrails(state: AgentState) -> str:
+                violations = state.get("guardrail_violations", [])
+                if violations:
+                    return "synthesis"
+                return "planner"
+
+            graph.add_conditional_edges("input_guardrails", route_after_guardrails)
+        else:
+            graph.set_entry_point("planner")
 
         def route_after_plan(state: AgentState) -> list[str]:
             sources = state.get("sources", [])
@@ -126,6 +147,10 @@ class OrchestratorAgent:
         for node in ["doc_agent", "sql_agent", "web_agent", "api_agent"]:
             graph.add_edge(node, "synthesis")
 
-        graph.add_edge("synthesis", END)
+        if guardrails_agent:
+            graph.add_edge("synthesis", "output_guardrails")
+            graph.add_edge("output_guardrails", END)
+        else:
+            graph.add_edge("synthesis", END)
 
         return graph.compile()

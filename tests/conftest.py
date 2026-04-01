@@ -27,6 +27,7 @@ _STUB_MODULES = [
     "nemoguardrails",
     "streamlit",
     "pypdf",
+    "requests.utils",
 ]
 
 for mod_name in _STUB_MODULES:
@@ -57,4 +58,6 @@ def sample_state():
         "final_answer": "",
         "reasoning_trace": [],
         "token_usage": 0,
+        "guardrail_violations": [],
+        "guardrail_output_flags": [],
     }

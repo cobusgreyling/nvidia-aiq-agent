@@ -1,6 +1,7 @@
 """NeMo AgentIQ — Streamlit GUI for Enterprise Agentic RAG."""
 
 import datetime
+import time
 import streamlit as st
 from dotenv import load_dotenv
 
@@ -12,6 +13,8 @@ from agents.sql_agent import SQLAgent  # noqa: E402
 from agents.web_agent import WebAgent  # noqa: E402
 from agents.api_agent import APIAgent  # noqa: E402
 from agents.synthesis import SynthesisAgent  # noqa: E402
+from agents.guardrails import GuardrailsAgent  # noqa: E402
+import chat_store  # noqa: E402
 
 st.set_page_config(page_title="NeMo AgentIQ", page_icon="⚡", layout="wide")
 
@@ -21,6 +24,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "doc_agent" not in st.session_state:
     st.session_state.doc_agent = DocAgent()
+if "conversation_id" not in st.session_state:
+    st.session_state.conversation_id = None
 
 doc_agent = st.session_state.doc_agent
 
@@ -105,7 +110,33 @@ with st.sidebar:
     with col_clear:
         if st.button("Clear Chat"):
             st.session_state.messages = []
+            st.session_state.conversation_id = None
             st.rerun()
+
+    # ── Saved Conversations ───────────────────────────────────────────────
+    st.divider()
+    st.subheader("💾 Conversations")
+    if st.button("New Conversation", type="primary"):
+        st.session_state.messages = []
+        st.session_state.conversation_id = None
+        st.rerun()
+
+    conversations = chat_store.list_conversations()
+    for conv in conversations[:20]:
+        col_load, col_del = st.columns([4, 1])
+        with col_load:
+            label = f"{conv['title']} ({conv['message_count']} msgs)"
+            if st.button(label, key=f"load_{conv['id']}"):
+                st.session_state.conversation_id = conv["id"]
+                st.session_state.messages = chat_store.load_messages(conv["id"])
+                st.rerun()
+        with col_del:
+            if st.button("🗑", key=f"del_{conv['id']}"):
+                chat_store.delete_conversation(conv["id"])
+                if st.session_state.conversation_id == conv["id"]:
+                    st.session_state.messages = []
+                    st.session_state.conversation_id = None
+                st.rerun()
 
     st.caption("Powered by NVIDIA NIM + LangChain")
 
@@ -159,15 +190,17 @@ if query := st.chat_input("Ask anything..."):
         with st.status("Thinking...", expanded=True) as status:
 
             # Step 1: Plan
-            st.write("🧠 Planning query strategy...")
+            st.write("🛡️ Checking input guardrails...")
             orchestrator = OrchestratorAgent()
             sql_agent = SQLAgent()
             web_agent = WebAgent()
             api_agent = APIAgent()
             synthesis_agent = SynthesisAgent()
+            guardrails_agent = GuardrailsAgent()
 
             graph = orchestrator.build_graph(
-                doc_agent, sql_agent, web_agent, api_agent, synthesis_agent
+                doc_agent, sql_agent, web_agent, api_agent,
+                synthesis_agent, guardrails_agent=guardrails_agent,
             )
 
             # Step 2: Execute sub-agents (non-streaming part)
@@ -197,38 +230,78 @@ if query := st.chat_input("Ask anything..."):
                 "final_answer": "",
                 "reasoning_trace": [],
                 "token_usage": 0,
+                "guardrail_violations": [],
+                "guardrail_output_flags": [],
             }
 
             # Run the full graph to get sub-agent results
+            pipeline_start = time.perf_counter()
             result = graph.invoke(initial_state)
+            pipeline_ms = round((time.perf_counter() - pipeline_start) * 1000)
 
-            status.update(label="Complete", state="complete")
+            status.update(label=f"Complete ({pipeline_ms}ms)", state="complete")
 
-        # Step 3: Display answer — stream if enabled
-        has_results = any(result.get(k) for k in ("doc_results", "sql_results", "web_results", "api_results"))
-        if enable_streaming and has_results:
-            # Re-stream just the synthesis for a nice UX
-            full_response = st.write_stream(
-                synthesis_agent.stream(result)
+        # Check if input guardrails blocked the query
+        violations = result.get("guardrail_violations", [])
+        if violations:
+            st.warning(
+                "This query was flagged by safety guardrails: "
+                + ", ".join(v.replace("_", " ") for v in violations)
             )
-            if full_response:
-                result["final_answer"] = full_response
-        else:
+            result["final_answer"] = (
+                "I'm unable to process this query as it was flagged by our safety guardrails. "
+                "Please rephrase your question."
+            )
             st.markdown(result["final_answer"])
+        else:
+            # Step 3: Display answer — stream if enabled
+            has_results = any(
+                result.get(k) for k in ("doc_results", "sql_results", "web_results", "api_results")
+            )
+            if enable_streaming and has_results:
+                # Re-stream just the synthesis for a nice UX
+                full_response = st.write_stream(
+                    synthesis_agent.stream(result)
+                )
+                if full_response:
+                    result["final_answer"] = full_response
+            else:
+                st.markdown(result["final_answer"])
+
+        # Show output guardrail flags if any
+        output_flags = result.get("guardrail_output_flags", [])
+        if output_flags:
+            flag_labels = [f.replace("_", " ").title() for f in output_flags]
+            st.info(f"🛡️ Output guardrails applied: {', '.join(flag_labels)}")
 
         # Reasoning trace
         with st.expander("Reasoning Trace"):
             for step in result.get("reasoning_trace", []):
                 st.markdown(f"- {step}")
 
-        # Token usage
+        # Metrics panel
         tokens = result.get("token_usage", 0)
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.metric("Tokens Used", f"{tokens:,}")
         with col2:
             cost = tokens * 0.000001  # rough estimate
             st.metric("Est. Cost", f"${cost:.4f}")
+        with col3:
+            st.metric("Pipeline Latency", f"{pipeline_ms:,}ms")
+
+    # Persist messages to SQLite
+    if st.session_state.conversation_id is None:
+        title = query[:60] + ("..." if len(query) > 60 else "")
+        st.session_state.conversation_id = chat_store.create_conversation(title)
+
+    chat_store.save_message(st.session_state.conversation_id, "user", query)
+    chat_store.save_message(
+        st.session_state.conversation_id, "assistant",
+        result["final_answer"],
+        trace=result.get("reasoning_trace", []),
+        tokens=tokens,
+    )
 
     st.session_state.messages.append({
         "role": "assistant",

@@ -19,3 +19,21 @@ synthesis:
 embeddings:
   model: nvidia/nv-embedqa-e5-v5
   dimensions: 1024
+
+# API agent — pre-configured public endpoints for demo
+api_endpoints:
+  weather:
+    url: "https://wttr.in/{query}?format=j1"
+    method: GET
+    description: "Weather data for any city via wttr.in"
+    query_param: "path"
+  country_info:
+    url: "https://restcountries.com/v3.1/name/{query}"
+    method: GET
+    description: "Country information (population, region, capital, languages)"
+    query_param: "path"
+  exchange_rates:
+    url: "https://open.er-api.com/v6/latest/USD"
+    method: GET
+    description: "Current exchange rates (base USD)"
+    query_param: "none"

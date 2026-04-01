@@ -145,14 +145,17 @@ class TestAPIAgent:
             mock_resp = MagicMock()
             mock_resp.json.return_value = {"data": "test"}
             mock_requests.get.return_value = mock_resp
+            mock_requests.utils.quote.side_effect = lambda x: x
 
             from agents.api_agent import APIAgent
 
             agent = APIAgent.__new__(APIAgent)
-            agent.endpoints = {"test": {"url": "https://api.example.com/data", "method": "GET"}}
+            agent.endpoints = {
+                "test": {"url": "https://api.example.com/data", "method": "GET", "query_param": "query"},
+            }
 
-            result = agent._call_endpoint("test", {"query": "hello"})
-            assert result == {"data": "test"}
+            result = agent._call_endpoint("test", "hello")
+            assert '"data": "test"' in result
             mock_requests.get.assert_called_once()
 
 
