@@ -69,40 +69,11 @@ An open-source implementation inspired by NVIDIA's AI-Q blueprint. NeMo AgentIQ 
 
 ## Streamlit GUI
 
-```
-┌─────────────────────────────────────────────────┐
-│  NeMo AgentIQ                               ⚙️   │
-├─────────────────────────────────────────────────┤
-│                                                  │
-│  ┌────────────────────────────────┐  ┌────────┐ │
-│  │ Ask anything...                │  │  Send  │ │
-│  └────────────────────────────────┘  └────────┘ │
-│                                                  │
-│  Data Sources:  ☑ Documents  ☑ SQL  ☑ Web  ☑ API│
-│  Model:  [Nemotron-340B ▼]   Depth: [Auto ▼]   │
-│                                                  │
-├─────────────────────────────────────────────────┤
-│  ANSWER                                          │
-│  ┌─────────────────────────────────────────────┐ │
-│  │ Based on 3 sources, revenue increased 23%   │ │
-│  │ in Q3 driven by...                          │ │
-│  │                                              │ │
-│  │ Sources: [doc.pdf p.12] [sales_db] [web]    │ │
-│  └─────────────────────────────────────────────┘ │
-│                                                  │
-│  REASONING TRACE                          [▼]    │
-│  ┌─────────────────────────────────────────────┐ │
-│  │ Step 1: Classified as financial query        │ │
-│  │ Step 2: Selected sources → docs, sql, web   │ │
-│  │ Step 3: Doc agent found 4 matches            │ │
-│  │ Step 4: SQL agent queried revenue table      │ │
-│  │ Step 5: Synthesised with citations           │ │
-│  └─────────────────────────────────────────────┘ │
-│                                                  │
-│  TOKEN USAGE        COST                         │
-│  ████░░ 3.2K        $0.004                       │
-└─────────────────────────────────────────────────┘
-```
+
+<p align="center">
+  <img src="2026-04-01_20-25-13.jpg" alt="Streamlit GUI" width="100%"/>
+</p>
+
 
 ## Tech Stack
 
