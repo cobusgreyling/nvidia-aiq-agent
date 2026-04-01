@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="logo.svg" alt="NeMo AgentIQ Logo" width="500"/>
+  <img src="header.jpg" alt="AIQ Agent — Multi-Source Agentic RAG" width="100%"/>
 </p>
-
-<h1 align="center">NeMo AgentIQ</h1>
 
 <p align="center"><strong>Enterprise Agentic RAG with Multi-Source Reasoning — Powered by NVIDIA NIM & LangChain</strong></p>
 
