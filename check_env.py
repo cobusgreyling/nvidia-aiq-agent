@@ -23,14 +23,26 @@ def main() -> int:
     # ── API keys ────────────────────────────────────────────────────────────
     print("API Keys:")
     nvidia_key = os.getenv("NVIDIA_API_KEY", "")
-    ok = check("NVIDIA_API_KEY", bool(nvidia_key) and nvidia_key != "your-nvidia-nim-api-key-here",
-               "required for NIM model calls")
-    passed += ok; failed += not ok
+    ok = check(
+        "NVIDIA_API_KEY",
+        bool(nvidia_key) and nvidia_key != "your-nvidia-nim-api-key-here",
+        "required for NIM model calls",
+    )
+    if ok:
+        passed += 1
+    else:
+        failed += 1
 
     tavily_key = os.getenv("TAVILY_API_KEY", "")
-    ok = check("TAVILY_API_KEY", bool(tavily_key) and tavily_key != "your-tavily-api-key-for-web-search",
-               "optional — needed only for web search agent")
-    passed += ok; failed += not ok
+    ok = check(
+        "TAVILY_API_KEY",
+        bool(tavily_key) and tavily_key != "your-tavily-api-key-for-web-search",
+        "optional — needed only for web search agent",
+    )
+    if ok:
+        passed += 1
+    else:
+        failed += 1
 
     # ── Python dependencies ─────────────────────────────────────────────────
     print("\nDependencies:")
@@ -52,7 +64,10 @@ def main() -> int:
             ok = check(pip_name, True)
         except ImportError:
             ok = check(pip_name, False, f"pip install {pip_name}")
-        passed += ok; failed += not ok
+        if ok:
+            passed += 1
+        else:
+            failed += 1
 
     optional = [
         ("tavily", "tavily-python"),
@@ -65,35 +80,59 @@ def main() -> int:
             ok = check(f"{pip_name} (optional)", True)
         except ImportError:
             ok = check(f"{pip_name} (optional)", False, f"pip install {pip_name}")
-        passed += ok; failed += not ok
+        if ok:
+            passed += 1
+        else:
+            failed += 1
 
     # ── Config files ────────────────────────────────────────────────────────
     print("\nConfig Files:")
     for cfg in ["config/models.yaml", "config/guardrails.yaml"]:
         exists = Path(cfg).exists()
         ok = check(cfg, exists, "missing" if not exists else "")
-        passed += ok; failed += not ok
+        if ok:
+            passed += 1
+        else:
+            failed += 1
 
     env_file = Path(".env").exists()
     ok = check(".env", env_file, "copy .env.example to .env and fill in keys" if not env_file else "")
-    passed += ok; failed += not ok
+    if ok:
+        passed += 1
+    else:
+        failed += 1
 
     # ── Data paths ──────────────────────────────────────────────────────────
     print("\nData Paths:")
     docs_dir = Path("data/documents")
-    ok = check("data/documents/", docs_dir.exists(),
-               "will be created on first ingest" if not docs_dir.exists() else f"{len(list(docs_dir.iterdir()))} file(s)")
-    passed += ok; failed += not ok
+    doc_detail = "will be created on first ingest"
+    if docs_dir.exists():
+        doc_detail = f"{len(list(docs_dir.iterdir()))} file(s)"
+    ok = check("data/documents/", docs_dir.exists(), doc_detail)
+    if ok:
+        passed += 1
+    else:
+        failed += 1
 
     vs_path = Path("data/vectorstore")
-    ok = check("data/vectorstore/", vs_path.exists(),
-               "run 'python ingest.py' to create" if not vs_path.exists() else "")
-    passed += ok; failed += not ok
+    ok = check(
+        "data/vectorstore/", vs_path.exists(),
+        "run 'python ingest.py' to create" if not vs_path.exists() else "",
+    )
+    if ok:
+        passed += 1
+    else:
+        failed += 1
 
     db_path = Path("data/sample.db")
-    ok = check("data/sample.db", db_path.exists(),
-               "run 'python seed_sample_db.py' to create" if not db_path.exists() else "")
-    passed += ok; failed += not ok
+    ok = check(
+        "data/sample.db", db_path.exists(),
+        "run 'python seed_sample_db.py' to create" if not db_path.exists() else "",
+    )
+    if ok:
+        passed += 1
+    else:
+        failed += 1
 
     # ── Summary ─────────────────────────────────────────────────────────────
     print(f"\n{'=' * 50}")

@@ -28,7 +28,7 @@ doc_agent = st.session_state.doc_agent
 def _export_chat_markdown() -> str:
     """Format the conversation history as a Markdown document."""
     lines = [
-        f"# NeMo AgentIQ — Chat Export",
+        "# NeMo AgentIQ — Chat Export",
         f"*Exported on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}*\n",
         "---\n",
     ]
