@@ -4,6 +4,9 @@ import yaml
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
+from log_config import setup_logging
+
+logger = setup_logging()
 
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
@@ -14,6 +17,7 @@ class AgentState(TypedDict):
     chat_history: str
     plan: dict
     sources: list[str]
+    allowed_sources: list[str]
     depth: str
     doc_results: str
     sql_results: str
@@ -73,6 +77,10 @@ class OrchestratorAgent:
             elif line.startswith("PLAN:"):
                 plan = line.split(":", 1)[1].strip()
 
+        # Filter to only user-allowed sources
+        allowed = state.get("allowed_sources", [])
+        if allowed:
+            sources = [s for s in sources if s in allowed]
         state["sources"] = sources
         state["depth"] = depth
         state["plan"] = {"sources": sources, "depth": depth, "description": plan}
@@ -80,6 +88,7 @@ class OrchestratorAgent:
             f"Step 1: Classified query — depth={depth}",
             f"Step 2: Selected sources → {', '.join(sources)}",
         ]
+        logger.info("Query planned: depth=%s, sources=%s", depth, sources)
         return state
 
     def route(self, state: AgentState) -> list[str]:

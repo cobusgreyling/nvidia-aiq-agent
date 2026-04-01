@@ -130,11 +130,23 @@ if query := st.chat_input("Ask anything..."):
 
             # Step 2: Execute sub-agents (non-streaming part)
             st.write("🔍 Querying data sources...")
+            # Build allowed sources from user toggles
+            allowed_sources = []
+            if use_docs:
+                allowed_sources.append("docs")
+            if use_sql:
+                allowed_sources.append("sql")
+            if use_web:
+                allowed_sources.append("web")
+            if use_api:
+                allowed_sources.append("api")
+
             initial_state = {
                 "query": query,
                 "chat_history": chat_history,
                 "plan": {},
                 "sources": [],
+                "allowed_sources": allowed_sources,
                 "depth": depth.lower() if depth != "Auto" else "medium",
                 "doc_results": "",
                 "sql_results": "",
@@ -151,7 +163,8 @@ if query := st.chat_input("Ask anything..."):
             status.update(label="Complete", state="complete")
 
         # Step 3: Display answer — stream if enabled
-        if enable_streaming and result.get("doc_results") or result.get("sql_results") or result.get("web_results") or result.get("api_results"):
+        has_results = any(result.get(k) for k in ("doc_results", "sql_results", "web_results", "api_results"))
+        if enable_streaming and has_results:
             # Re-stream just the synthesis for a nice UX
             full_response = st.write_stream(
                 synthesis_agent.stream(result)

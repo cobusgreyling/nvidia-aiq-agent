@@ -10,3 +10,8 @@ sqlalchemy>=2.0.0
 requests>=2.32.0
 tavily-python>=0.5.0
 pypdf>=4.0.0
+
+# Dev / CI
+pytest>=8.0.0
+flake8>=7.0.0
+mypy>=1.8.0

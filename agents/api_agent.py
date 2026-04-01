@@ -3,6 +3,9 @@
 import yaml
 import requests
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from log_config import setup_logging
+
+logger = setup_logging()
 
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
@@ -54,6 +57,7 @@ class APIAgent:
                 result = self._call_endpoint(name, {"query": state["query"]})
                 all_results.append(f"{name}: {result}")
             except Exception as e:
+                logger.error("API agent call to %s failed: %s", name, e)
                 all_results.append(f"{name}: error — {e}")
 
         combined = "\n".join(all_results)

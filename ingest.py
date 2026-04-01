@@ -11,6 +11,9 @@ from langchain_community.document_loaders import (
     PyPDFLoader,
 )
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from log_config import setup_logging
+
+logger = setup_logging()
 
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
@@ -32,7 +35,7 @@ def ingest():
             "LangGraph orchestrates multi-agent workflows across document, SQL, web, and API sources. "
             "NeMo Guardrails enforce PII filtering, hallucination checks, and policy controls."
         )
-        print(f"Created sample document at {sample}")
+        logger.info("Created sample document at %s", sample)
 
     # Load all documents
     loaders = []
@@ -45,16 +48,16 @@ def ingest():
         try:
             documents.extend(loader.load())
         except Exception as e:
-            print(f"Warning: {e}")
+            logger.warning("Failed to load documents: %s", e)
 
     if not documents:
-        print("No documents found. Add files to data/documents/ and re-run.")
+        logger.warning("No documents found. Add files to data/documents/ and re-run.")
         return
 
     # Split
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     chunks = splitter.split_documents(documents)
-    print(f"Split {len(documents)} documents into {len(chunks)} chunks")
+    logger.info("Split %d documents into %d chunks", len(documents), len(chunks))
 
     # Embed and store
     embeddings = NVIDIAEmbeddings(model=MODEL_CONFIG["embeddings"]["model"])
@@ -62,7 +65,7 @@ def ingest():
 
     os.makedirs(os.path.dirname(VECTOR_STORE_PATH), exist_ok=True)
     vectorstore.save_local(VECTOR_STORE_PATH)
-    print(f"Vector store saved to {VECTOR_STORE_PATH}")
+    logger.info("Vector store saved to %s", VECTOR_STORE_PATH)
 
 
 if __name__ == "__main__":

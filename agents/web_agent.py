@@ -4,6 +4,9 @@ import os
 import yaml
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from tavily import TavilyClient
+from log_config import setup_logging
+
+logger = setup_logging()
 
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
@@ -60,6 +63,7 @@ class WebAgent:
         )
 
         urls = [r["url"] for r in results if r["url"]]
+        logger.info("Web agent found %d results", len(results))
         state["web_results"] = response.content
         state["reasoning_trace"].append(
             f"Step: Web agent searched Tavily, found {len(results)} results from: {', '.join(urls[:3])}"

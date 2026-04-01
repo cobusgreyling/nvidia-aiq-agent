@@ -2,6 +2,9 @@
 
 import yaml
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from log_config import setup_logging
+
+logger = setup_logging()
 
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
@@ -60,13 +63,23 @@ class SynthesisAgent:
             "Step: Synthesis agent merged results with citations"
         )
 
-        # Estimate token usage (rough)
-        total_input = sum(
-            len(str(state.get(k, "")).split())
-            for k in ["doc_results", "sql_results", "web_results", "api_results"]
-        )
-        state["token_usage"] = total_input * 2  # rough estimate
+        # Use actual token usage from model response when available
+        usage = getattr(response, "usage_metadata", None) or getattr(response, "response_metadata", {}).get("token_usage")
+        if usage and isinstance(usage, dict):
+            state["token_usage"] = usage.get("total_tokens", 0) or (
+                usage.get("input_tokens", 0) + usage.get("output_tokens", 0)
+            )
+        elif usage and hasattr(usage, "total_tokens"):
+            state["token_usage"] = usage.total_tokens
+        else:
+            # Fallback: estimate from word count (approx 1.3 tokens per word)
+            total_words = sum(
+                len(str(state.get(k, "")).split())
+                for k in ["doc_results", "sql_results", "web_results", "api_results", "final_answer"]
+            )
+            state["token_usage"] = int(total_words * 1.3)
 
+        logger.info("Synthesis complete, tokens=%s", state["token_usage"])
         return state
 
     def stream(self, state: dict):

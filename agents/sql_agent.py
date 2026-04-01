@@ -4,6 +4,9 @@ import yaml
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
 from langchain_community.utilities import SQLDatabase
 from langchain.chains import create_sql_query_chain
+from log_config import setup_logging
+
+logger = setup_logging()
 
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
@@ -31,6 +34,7 @@ class SQLAgent:
                 f"Step: SQL agent executed → {sql_query.strip()}"
             )
         except Exception as e:
+            logger.error("SQL agent execution failed: %s", e)
             state["sql_results"] = f"SQL error: {e}"
             state["reasoning_trace"].append(
                 f"Step: SQL agent failed → {e}"

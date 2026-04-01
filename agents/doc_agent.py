@@ -9,6 +9,9 @@ from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import TextLoader, PyPDFLoader
+from log_config import setup_logging
+
+logger = setup_logging()
 
 with open("config/models.yaml") as f:
     MODEL_CONFIG = yaml.safe_load(f)
@@ -80,6 +83,7 @@ class DocAgent:
         os.makedirs(os.path.dirname(VECTOR_STORE_PATH), exist_ok=True)
         self.vectorstore.save_local(VECTOR_STORE_PATH)
 
+        logger.info("Ingested %d file(s) → %d chunks", len(uploaded_files), len(chunks))
         return len(chunks)
 
     def run(self, state: dict) -> dict:
@@ -111,6 +115,7 @@ class DocAgent:
             sources.append(f"[{src} p.{page}]" if page else f"[{src}]")
 
         state["doc_results"] = result["result"]
+        logger.info("Doc agent retrieved %d matches", len(sources))
         state["reasoning_trace"].append(
             f"Step: Doc agent retrieved {len(sources)} matches from {', '.join(set(sources))}"
         )
