@@ -1,6 +1,7 @@
 """API Agent — calls configured REST/GraphQL endpoints."""
 
 import json
+from urllib.parse import quote as url_quote
 import yaml
 import requests
 from langchain_nvidia_ai_endpoints import ChatNVIDIA
@@ -48,7 +49,7 @@ class APIAgent:
         url = endpoint.get("url", "")
         query_param = endpoint.get("query_param", "query")
         if query_param == "path" and "{query}" in url:
-            url = url.replace("{query}", requests.utils.quote(param))
+            url = url.replace("{query}", url_quote(param))
         return url
 
     def _call_endpoint(self, name: str, param: str) -> str:

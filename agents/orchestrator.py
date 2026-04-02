@@ -145,14 +145,14 @@ class OrchestratorAgent:
                 result_key = SOURCE_RESULT_KEYS[source]
                 try:
                     result = future.result()
-                    state[result_key] = result.get(result_key, "")
+                    state[result_key] = result.get(result_key, "")  # type: ignore[literal-required]
                     # Collect reasoning traces from the sub-agent
                     for t in result.get("reasoning_trace", []):
                         if t not in traces:
                             traces.append(t)
                 except Exception as e:
                     logger.error("%s agent failed: %s", source, e)
-                    state[result_key] = f"{source} agent unavailable: {e}"
+                    state[result_key] = f"{source} agent unavailable: {e}"  # type: ignore[literal-required]
                     traces.append(f"Step: {source} agent failed — {e}")
                     failed.append(source)
 

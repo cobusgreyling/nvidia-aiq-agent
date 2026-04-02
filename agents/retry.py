@@ -22,7 +22,7 @@ try:
         requests.exceptions.ChunkedEncodingError,
     )
 except ImportError:
-    _HTTP_TRANSIENT = ()
+    _HTTP_TRANSIENT: tuple[type[Exception], ...] = ()
 
 
 def llm_retry(func):

@@ -39,7 +39,7 @@ class TestParallelExecution:
         synthesis_agent = MagicMock()
 
         orchestrator = self._make_orchestrator()
-        graph = orchestrator.build_graph(
+        orchestrator.build_graph(  # noqa: F841
             doc_agent, sql_agent, web_agent, api_agent, synthesis_agent
         )
 
@@ -127,11 +127,11 @@ class TestParallelExecution:
 
         doc_agent = MagicMock()
         sql_agent = MagicMock()
-        web_agent = MagicMock()
-        api_agent = MagicMock()
-        synthesis_agent = MagicMock()
+        web_agent = MagicMock()  # noqa: F841
+        api_agent = MagicMock()  # noqa: F841
+        synthesis_agent = MagicMock()  # noqa: F841
 
-        orchestrator = self._make_orchestrator()
+        orchestrator = self._make_orchestrator()  # noqa: F841
 
         # Simulate the execute_parallel path with empty sources
         # No agent should be called
