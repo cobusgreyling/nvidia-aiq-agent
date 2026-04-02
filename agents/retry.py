@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 # Transient exceptions worth retrying
 _TRANSIENT = (ConnectionError, TimeoutError, OSError)
 
+_HTTP_TRANSIENT: tuple[type[Exception], ...] = ()
 try:
     import requests.exceptions
     _HTTP_TRANSIENT = (
@@ -22,7 +23,7 @@ try:
         requests.exceptions.ChunkedEncodingError,
     )
 except ImportError:
-    _HTTP_TRANSIENT: tuple[type[Exception], ...] = ()
+    pass
 
 
 def llm_retry(func):
